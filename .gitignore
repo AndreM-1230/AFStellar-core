@@ -1,0 +1,13 @@
+/vendor/
+/composer.lock
+
+.idea/
+.phpstorm.meta.php
+_ide_helper.php
+
+*.swp
+*.swo
+~$*
+
+/storage/
+*.log
