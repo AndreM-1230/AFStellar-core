@@ -13,7 +13,7 @@
 Using the Config Class / Использование класса Config
 The framework provides a simple configuration system through the App\Core\Config class.
 Фреймворк предоставляет простую систему конфигурации через класс App\Core\Config
-
+https://packagist.org/packages/afstellar/af-stellar-core
 ```php
 Config::init([
     'DB_HOST' => '127.0.0.1',
