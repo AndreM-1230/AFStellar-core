@@ -15,18 +15,7 @@ class DB
 
     public static function table($table)
     {
-        if (!static::$connection) {
-            static::$connection = new PDO(
-                "mysql:host=".Config::$DB_HOST.";dbname=".Config::$DB_NAME,
-                    Config::$DB_USER,
-                    Config::$DB_PASS,
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_EMULATE_PREPARES => true
-                ]
-            );
-            static::$connection->exec("set names utf8");
-        }
+        static::$connection = Config::connection();
         return new QueryBuilder(static::$connection, $table);
     }
 
@@ -56,5 +45,21 @@ class DB
     public static function delete($sql, $bindings = [])
     {
         return self::insert($sql, $bindings);
+    }
+
+    public static function beginTransaction()
+    {
+        static::$connection = Config::connection();
+        static::$connection->beginTransaction();
+    }
+
+    public static function rollBack()
+    {
+        static::$connection->rollBack();
+    }
+
+    public static function commit()
+    {
+        static::$connection->commit();
     }
 }

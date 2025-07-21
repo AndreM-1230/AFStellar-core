@@ -63,6 +63,26 @@ class Blueprint
         return $this;
     }
 
+    public function float(string $column, int $precision = 8, int $scale = 2)
+    {
+        $this->columns[] = "{$column} DECIMAL({$precision},{$scale})";
+        return $this;
+    }
+
+    public function bit(string $column, int $length = 1)
+    {
+        $length = max(1, min(64, $length));
+        $this->columns[] = "{$column} BIT({$length})";
+        return $this;
+    }
+
+    public function varchar(string $column, int $length = 1)
+    {
+        $length = max(1, $length);
+        $this->columns[] = "{$column} VARCHAR({$length})";
+        return $this;
+    }
+
     public function timestamps(): self
     {
         $this->columns[] = "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP";

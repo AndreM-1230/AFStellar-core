@@ -19,42 +19,33 @@ abstract class Model {
             $fillable_keys = $this->getFillable();
             $this->fillable = array_intersect_key($fillable, array_flip($fillable_keys));
             $this->joined = array_diff_key($fillable, array_flip($fillable_keys));
+        } else {
+            $fillable_keys = $this->getFillable();
+            $this->fillable = array_flip($fillable_keys);
         }
         static::connect();
     }
 
     protected static function connect()
     {
-        if (!static::$connection) {
-            static::$connection = new PDO(
-                "mysql:host=".Config::$DB_HOST.";dbname=".Config::$DB_NAME,
-                Config::$DB_USER,
-                Config::$DB_PASS,
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_EMULATE_PREPARES => true
-                ]
-            );
-            static::$connection->exec("set names utf8");
-        }
+        static::$connection = Config::connection();
     }
 
     protected static function boot()
     {
-        if (empty(static::$columnTypes)) {
-            $sth = static::$connection->query("
-                SELECT COLUMN_NAME, COLUMN_TYPE, DATA_TYPE
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_SCHEMA = DATABASE()
-                AND TABLE_NAME = '". static::getTable() ."'
-            ");
-            $columns = $sth->fetchAll(PDO::FETCH_ASSOC);
-            foreach($columns as $column) {
-                static::$columnTypes[$column['COLUMN_NAME']] = [
-                    'type' =>  strtolower($column['COLUMN_TYPE']),
-                    'data_type' => strtolower($column['DATA_TYPE']),
-                ];
-            }
+        static::$columnTypes = null;
+        $sth = static::$connection->query("
+            SELECT COLUMN_NAME, COLUMN_TYPE, DATA_TYPE
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = '". static::getTable() ."'
+        ");
+        $columns = $sth->fetchAll(PDO::FETCH_ASSOC);
+        foreach($columns as $column) {
+            static::$columnTypes[$column['COLUMN_NAME']] = [
+                'type' =>  strtolower($column['COLUMN_TYPE']),
+                'data_type' => strtolower($column['DATA_TYPE']),
+            ];
         }
     }
 
@@ -110,7 +101,13 @@ abstract class Model {
 
     public function __set($name, $value)
     {
-        $this->fillable[$name] = $value;
+        if (in_array($name, $this->getFillable())) {
+            $this->fillable[$name] = $value;
+        } elseif (array_key_exists($name, $this->relations) || method_exists($this, $name)) {
+            $this->relations[$name] = $value;
+        } else {
+            $this->joined[$name] = $value;
+        }
     }
 
     public function fillable($name)
@@ -125,10 +122,11 @@ abstract class Model {
 
     public function fill(array $values)
     {
-        foreach ($values as $key => $value) {
-            if (in_array($key, $this->getFillable())) {
-                $this->__set($key, $value);
-                $this->fillable[$key] = $value;
+        foreach ($this->getFillable() as $key => $value) {
+            if (in_array($key, array_keys($values))) {
+                $this->fillable[$key] = $values[$key];
+            } else {
+                $this->fillable[$key] = null;
             }
         }
         return $this;
@@ -136,13 +134,26 @@ abstract class Model {
 
     public function save()
     {
+        $fillable = [];
+        foreach ($this->fillable as $key => $value) {
+            if ($value !== null) {
+                $fillable[$key] = $value;
+            }
+        }
         $table = static::getTable();
-        $columns = implode(', ', array_keys($this->fillable));
-        $placeholders = implode(', ', array_fill(0, count($this->fillable), '?'));
+        $columns = implode(', ', array_keys($fillable));
+        $placeholders = array_fill(0, count($fillable), '?');
+        foreach (array_keys($fillable) as $key => $data_value) {
+            $type = static::getColumnType($data_value);
+            if ($type && $type['data_type'] === 'bit' && $type['type'] === 'bit(1)') {
+                $placeholders[$key] = 'b?';
+            }
+        }
+        $placeholders = implode(', ', $placeholders);
         $sth = static::$connection->prepare(
             "INSERT INTO {$table} ({$columns}) VALUES ({$placeholders})"
         );
-        $result = $sth->execute(array_values($this->fillable));
+        $result = $sth->execute(array_values($fillable));
 
         if ($result && !$this->exists) {
             $this->id = static::$connection->lastInsertId();
@@ -165,11 +176,11 @@ abstract class Model {
             return true;
         }
         $table = static::getTable();
-        $setClause = implode('`, `', array_map(
+        $setClause = implode(', ', array_map(
             function ($col) {return "$col = ?";},
             array_keys($fillableAttr)));
         $sth  = static::$connection->prepare(
-            "UPDATE `{$table}` SET `{$setClause}` WHERE id = ?"
+            "UPDATE `{$table}` SET {$setClause} WHERE id = ?"
         );
         return $sth->execute(array_merge(array_values($fillableAttr), [$this->id]));
     }

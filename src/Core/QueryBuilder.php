@@ -16,6 +16,7 @@ class QueryBuilder
     protected $orWhere = false;
     protected $columns = ['*'];
     protected $orders = [];
+    protected $group = [];
     protected $joins = [];
 
     public function __construct(PDO $connection, $table)
@@ -194,6 +195,7 @@ class QueryBuilder
             $sql .= " WHERE ";
             $sql .= $this->buildWhereClause($this->wheres);
         }
+        $sql .= $this->compileGroup();
         $sql .= $this->compileOrders();
         if ($this->limit) {
             $sql .= " LIMIT {$this->limit}";
@@ -209,9 +211,9 @@ class QueryBuilder
         $columns = [];
         if (!empty($this->columns)) {
             foreach ($this->columns as $column) {
-                $col = implode('` as `', explode(' as ', $column));
-                $col = '`' . implode('`.`', explode('.', $col)) . '`';
-                $columns[] = str_replace('`*`', '*', $col);
+                $col = implode(' as ', explode(' as ', $column));
+                $col = implode('.', explode('.', $col));
+                $columns[] = str_replace('*', '*', $col);
             }
         }
         return !empty($columns) ?
@@ -219,19 +221,15 @@ class QueryBuilder
             '*';
     }
 
-    protected function compileWheres()
-    {
-        if (empty($this->wheres)) {
-            return '';
-        }
-        $sql = [];
-    }
-
     public function buildWhereClause($wheres)
     {
         $clauses = [];
         foreach ($wheres as $key => $where) {
-            $value = $where['operator'] == 'IN' ? $where['value'] : '?';
+            if (is_null($where['value'])) {
+                $value = '';
+            } else {
+                $value = $where['operator'] == 'IN' ? $where['value'] : '?';
+            }
             $prefix = $key === 0 ? '' : $where['type'] . ' ';
             if (isset($where['group'])) {
                 $groupSql = $this->buildWhereClause($where['group']);
@@ -276,14 +274,14 @@ class QueryBuilder
     public function insert(array $data)
     {
         $columns = implode(', ', array_keys($data));
-        $placeholders = implode(', ', array_fill(0, count($data), '?'));
+        $placeholders = array_fill(0, count($data), '?');
         foreach (array_keys($data) as $key => $data_value) {
             $type = $this->model::getColumnType($data_value);
             if ($type && $type['data_type'] === 'bit' && $type['type'] === 'bit(1)') {
                 $placeholders[$key] = 'b?';
             }
         }
-        
+        $placeholders = implode(', ', $placeholders);
         $sql  = "INSERT INTO `{$this->table}` ({$columns}) VALUES ({$placeholders})";
         $sth = $this->connection->prepare($sql);
         return $sth->execute(array_values($data));
@@ -346,6 +344,12 @@ class QueryBuilder
         return $this;
     }
 
+    public function groupBy($column)
+    {
+        $this->group[] = $column;
+        return $this;
+    }
+
     public function compileOrders()
     {
         if (empty($this->orders)) {
@@ -358,6 +362,14 @@ class QueryBuilder
             $this->orders
         );
         return ' ORDER BY ' . implode(', ', $clauses);
+    }
+
+    public function compileGroup()
+    {
+        if (empty($this->group)) {
+            return '';
+        }
+        return ' GROUP BY ' . implode(', ', $this->group);
     }
 
     public function toRawSql()
@@ -388,10 +400,14 @@ class QueryBuilder
         return $this;
     }
 
-    public function whereRaw($sql, $bindings = [])
+    public function whereRaw($sql, $type = 'AND', $bindings = [])
     {
+        if (is_array($type)) {
+            $bindings = $type;
+            $type = 'AND';
+        }
         $this->wheres[] = [
-            'type' => 'AND',
+            'type' => $type,
             'sql' => $sql,
         ];
         $this->bindings = array_merge($this->bindings, $bindings);
