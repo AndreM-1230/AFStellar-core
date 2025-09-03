@@ -247,7 +247,7 @@ class QueryBuilder
                     $where['column'] = implode('`.`', explode('.', $where['column']));
                     $clauses[] = $prefix . "`{$where['column']}` {$where['operator']} {$value}";
                 }
-                
+
             }
         }
         return implode(' ', $clauses);
@@ -298,7 +298,7 @@ class QueryBuilder
             return "{$column} = {$value}";
         }, array_keys($data)));
         $sql = "UPDATE `{$this->table}` SET {$setClause}";
-        
+
         if (!empty($this->wheres)) {
             $sql .= " WHERE ";
             $whereClauses = [];
@@ -357,6 +357,7 @@ class QueryBuilder
         }
         $clauses = array_map(
             function($order) {
+                $order['column'] = implode('`.`', explode('.', $order['column']));
                 return "`{$order['column']}` {$order['direction']}";
             },
             $this->orders

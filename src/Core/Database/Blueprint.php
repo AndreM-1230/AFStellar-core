@@ -39,6 +39,21 @@ class Blueprint
         return $this;
     }
 
+    public function date(string $column): self
+    {
+        $this->columns[] = "{$column} date";
+        return $this;
+    }
+
+    public function index(string $column, string $name = null): self
+    {
+        if (is_null($name)) {
+            $name = $column;
+        }
+        $this->columns[] = "INDEX `{$name}` (`{$column}`)";
+        return $this;
+    }
+
     public function notNull()
     {
         $this->columns[array_key_last($this->columns)] .= ' NOT NULL';
@@ -65,7 +80,7 @@ class Blueprint
 
     public function float(string $column, int $precision = 8, int $scale = 2)
     {
-        $this->columns[] = "{$column} DECIMAL({$precision},{$scale})";
+        $this->columns[] = "{$column} FLOAT({$precision},{$scale})";
         return $this;
     }
 

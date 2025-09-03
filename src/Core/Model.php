@@ -80,7 +80,7 @@ abstract class Model {
 
     public function __get($name)
     {
-        
+
         if (method_exists($this, $name)) {
             if (!array_key_exists($name, $this->relations)) {
                 $relation = $this->$name();
@@ -118,6 +118,14 @@ abstract class Model {
     public function getFillable()
     {
         return $this->fillable;
+    }
+
+    public function getItems()
+    {
+        if (count($this->fillable)) {
+            return $this->fillable;
+        }
+        return $this->joined;
     }
 
     public function fill(array $values)
@@ -177,7 +185,13 @@ abstract class Model {
         }
         $table = static::getTable();
         $setClause = implode(', ', array_map(
-            function ($col) {return "$col = ?";},
+            function ($col) {
+                $type = static::getColumnType($col);
+                if ($type && $type['data_type'] === 'bit' && $type['type'] === 'bit(1)') {
+                    return "$col = b?";
+                }
+                return "$col = ?";
+            },
             array_keys($fillableAttr)));
         $sth  = static::$connection->prepare(
             "UPDATE `{$table}` SET {$setClause} WHERE id = ?"
@@ -211,12 +225,18 @@ abstract class Model {
 
     public function hasMany($related, $foreignKey = null, $localKey = 'id')
     {
+        if (is_null($this->{$localKey})) {
+            return null;
+        }
         $foreignKey = $foreignKey ?: strtolower(basename(str_replace('\\', '/', static::class))) . '_id';
         return (new $related)->newQuery()->where($foreignKey, $this->{$localKey});
     }
 
     public function belongsTo($related, $foreignKey = null, $ownerKey = 'id')
     {
+        if (is_null($this->{$foreignKey})) {
+            return null;
+        }
         $foreignKey = $foreignKey ?: strtolower(basename(str_replace('\\', '/', $related))) . '_id';
         return (new $related)->newQuery()->where($ownerKey, $this->{$foreignKey})->first();
     }

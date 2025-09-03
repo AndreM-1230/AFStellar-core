@@ -110,8 +110,12 @@ class Collection implements ArrayAccess, IteratorAggregate, JsonSerializable
 
     public function toArray(): array
     {
-        return array_map(function (Model $item) {
-            return $item->toArray();
+        return array_map(function ($item) {
+            if ($item instanceof Model) {
+                return $item->getItems();
+            } else {
+                return $item;
+            }
         }, $this->items);
     }
 
@@ -167,7 +171,7 @@ class Collection implements ArrayAccess, IteratorAggregate, JsonSerializable
         return isset($this->items[$offset]);
     }
 
-    public function offsetGet($offset): ?Model
+    public function offsetGet($offset)
     {
         return $this->items[$offset] ?? null;
     }
