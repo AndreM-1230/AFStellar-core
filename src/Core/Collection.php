@@ -27,6 +27,11 @@ class Collection implements ArrayAccess, IteratorAggregate, JsonSerializable
         return $this->items;
     }
 
+    public function add($item)
+    {
+        $this->items[] = $item;
+    }
+
     public function first(): ?Model
     {
         return $this->items[0] ?? null;

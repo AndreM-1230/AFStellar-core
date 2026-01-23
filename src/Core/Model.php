@@ -240,4 +240,44 @@ abstract class Model {
         $foreignKey = $foreignKey ?: strtolower(basename(str_replace('\\', '/', $related))) . '_id';
         return (new $related)->newQuery()->where($ownerKey, $this->{$foreignKey})->first();
     }
+
+    /**
+     * @param Model $related Целевая модель
+     * @param mixed $through Связующая таблица
+     * @param mixed $firstKey Ключ в $through ссылающийся на эту $this модель
+     * @param mixed $secondKey Ключ в $related
+     * @param mixed $localKey Ключ в этой $this модели
+     * @param mixed $secondaryKey Ключ в $through ссылающийся на целевую $related модель
+     */
+    public function hasManyThrough($related, $through, $firstKey = null, $secondKey = null, $localKey = null, $secondaryKey = null)
+    {
+        if (is_null($this->{$localKey})) {
+            return null;
+        }
+        $relatedModel = new $related;
+        $relatedTable = $relatedModel->getTable();
+        return (new $related)->newQuery()
+            ->leftJoin($through, "{$through}.{$secondaryKey}", '=', "{$relatedTable}.{$secondKey}")
+            ->where("{$through}.{$firstKey}", $this->{$localKey});
+    }
+
+    /**
+     * @param Model $related Целевая модель
+     * @param mixed $through Связующая таблица
+     * @param mixed $firstKey Ключ в $through ссылающийся на эту $this модель
+     * @param mixed $secondKey Ключ в $related
+     * @param mixed $localKey Ключ в этой $this модели
+     * @param mixed $secondaryKey Ключ в $through ссылающийся на целевую $related модель
+     */
+    public function belongsToThrough($related, $through, $firstKey = null, $secondKey = null, $localKey = null, $secondaryKey = null)
+    {
+        if (is_null($this->{$localKey})) {
+            return null;
+        }
+        $relatedModel = new $related;
+        $relatedTable = $relatedModel->getTable();
+        return (new $related)->newQuery()
+            ->leftJoin($through, "{$through}.{$secondaryKey}", '=', "{$relatedTable}.{$secondKey}")
+            ->where("{$through}.{$firstKey}", $this->{$localKey})->first();
+    }
 }

@@ -11,17 +11,21 @@ abstract class Migration
     protected $connection;
     protected $table = 'migrations';
 
-    public function __construct()
+    public function __construct(?PDO $connection)
     {
-        $this->connection = new PDO(
-            "mysql:host=".Config::$DB_HOST.";dbname=".Config::$DB_NAME,
-            Config::$DB_USER,
-            Config::$DB_PASS,
-            [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_EMULATE_PREPARES => true
-            ]
-        );
+        if (!is_null($connection)){
+            $this->connection = $connection;
+        } else {
+            $this->connection = new PDO(
+                "mysql:host=".Config::$DB_HOST.";dbname=".Config::$DB_NAME,
+                Config::$DB_USER,
+                Config::$DB_PASS,
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_EMULATE_PREPARES => true
+                ]
+            );
+        }
     }
 
     abstract public function up();
@@ -65,6 +69,20 @@ abstract class Migration
         try {
             $this->connection->exec($sql);
             echo "Column {$column} added to {$table} successfully.\n";
+        } catch (PDOException $e) {
+            echo "Error adding column: " . $e->getMessage() . "\n";
+        }
+    }
+
+    protected function changeColumn(string $table, string $old_name, string $new_name, string $type, $value = [])
+    {
+        $sql = "ALTER TABLE `{$table}` CHANGE `{$old_name}` `{$new_name}` {$type}";
+        if ($type == 'ENUM') {
+            $sql .= "('" . implode("', '", $value) . "')";
+        }
+        try {
+            $this->connection->exec($sql);
+            echo "Column {$old_name} edited to {$table} successfully.\n";
         } catch (PDOException $e) {
             echo "Error adding column: " . $e->getMessage() . "\n";
         }

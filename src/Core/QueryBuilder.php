@@ -17,7 +17,9 @@ class QueryBuilder
     protected $columns = ['*'];
     protected $orders = [];
     protected $group = [];
+    protected $having = [];
     protected $joins = [];
+    protected $unions = [];
 
     public function __construct(PDO $connection, $table)
     {
@@ -85,11 +87,11 @@ class QueryBuilder
         return $this;
     }
 
-    public function whereIn($column, array $values)
+    public function whereIn($column, array $values, $type = 'AND')
     {
         $placeholders = implode(', ', array_fill(0, count($values), '?'));
         $this->wheres[] = [
-            'type' => 'AND',
+            'type' => $type,
             'column' => $column,
             'operator' => 'IN',
             'value' => '(' . $placeholders . ')'
@@ -98,10 +100,23 @@ class QueryBuilder
         return $this;
     }
 
-    public function whereNull($column)
+    public function whereNotIn($column, array $values)
     {
+        $placeholders = implode(', ', array_fill(0, count($values), '?'));
         $this->wheres[] = [
             'type' => 'AND',
+            'column' => $column,
+            'operator' => 'NOT IN',
+            'value' => '(' . $placeholders . ')'
+        ];
+        $this->bindings = array_merge($this->bindings, $values);
+        return $this;
+    }
+
+    public function whereNull($column, $type = 'AND')
+    {
+        $this->wheres[] = [
+            'type' => $type,
             'column' => $column,
             'operator' => 'IS NULL',
             'value' => null
@@ -118,6 +133,35 @@ class QueryBuilder
             'value' => null
         ];
         return $this;
+    }
+
+    public function having($raw)
+    {
+        $this->having[] = $raw;
+        return $this;
+    }
+
+    public function union($query, $all = false)
+    {
+        $this->unions[] = [
+            'query' => $query,
+            'all' => $all
+        ];
+        return $this;
+    }
+
+    protected function compileUnions()
+    {
+        if (empty($this->unions)) {
+            return '';
+        }
+        $unionSql = '';
+        foreach ($this->unions as $union) {
+            $this->bindings = array_merge($this->bindings, $union['query']->bindings);
+            $key = $union['all'] ? 'UNION ALL' : 'UNION';
+            $unionSql .= " {$key} (" . $union['query']->compileSelect() . ")";
+        }
+        return $unionSql;
     }
 
     public function get()
@@ -196,6 +240,7 @@ class QueryBuilder
             $sql .= $this->buildWhereClause($this->wheres);
         }
         $sql .= $this->compileGroup();
+        $sql .= $this->compileHaving();
         $sql .= $this->compileOrders();
         if ($this->limit) {
             $sql .= " LIMIT {$this->limit}";
@@ -203,6 +248,8 @@ class QueryBuilder
                 $sql .= " OFFSET {$this->offset}";
             }
         }
+        $sql .= $this->compileUnions();
+
         return $sql;
     }
 
@@ -228,7 +275,7 @@ class QueryBuilder
             if (is_null($where['value'])) {
                 $value = '';
             } else {
-                $value = $where['operator'] == 'IN' ? $where['value'] : '?';
+                $value = in_array($where['operator'], ['IN', 'NOT IN']) ? $where['value'] : '?';
             }
             $prefix = $key === 0 ? '' : $where['type'] . ' ';
             if (isset($where['group'])) {
@@ -371,6 +418,14 @@ class QueryBuilder
             return '';
         }
         return ' GROUP BY ' . implode(', ', $this->group);
+    }
+
+    public function compileHaving()
+    {
+        if (empty($this->having)) {
+            return '';
+        }
+        return ' HAVING ' . implode(' AND ', $this->having);
     }
 
     public function toRawSql()

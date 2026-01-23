@@ -37,6 +37,12 @@ class DB
         return $sth->execute($bindings);
     }
 
+    public static function exec($sql)
+    {
+        static::$connection = Config::connection();
+        static::$connection->exec($sql);
+    }
+
     public static function update($sql, $bindings = [])
     {
         return self::insert($sql, $bindings);
