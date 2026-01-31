@@ -1,6 +1,6 @@
 {
     "name": "afstellar/af-stellar-core",
-    "version": "0.8.5",
+    "version": "0.8.6",
     "description": "Lightweight MVC core with ORM, Migrations and Query Builder",
     "type": "library",
     "license": "MIT",
