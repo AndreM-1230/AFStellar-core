@@ -67,6 +67,9 @@ class QueryBuilder
     {
         $subQuery = new self($this->connection, $this->table);
         $callback($subQuery);
+        if (!count($subQuery->wheres)) {
+            return $this;
+        }
         $this->wheres[] = [
             'type' => 'AND',
             'group' => $subQuery->wheres
@@ -79,6 +82,9 @@ class QueryBuilder
     {
         $subQuery = new self($this->connection, $this->table);
         $callback($subQuery);
+        if (!count($subQuery->wheres)) {
+            return $this;
+        }
         $this->wheres[] = [
             'type' => 'OR',
             'group' => $subQuery->wheres
