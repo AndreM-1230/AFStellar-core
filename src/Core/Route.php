@@ -96,6 +96,7 @@ class Route
             list($controller, $method) = explode('@', $action);
             $controller = 'App\Controllers\\' . $controller;
             $controllerInstance = new $controller();
+            $request = Request::createFromGlobals();
             call_user_func_array([$controllerInstance, $method], $params);
         } else {
             throw new Exception('');
