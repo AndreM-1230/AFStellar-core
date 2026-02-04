@@ -4,7 +4,7 @@
     *Andre Moore*
 
 ## Requirements / Требования
-- PHP 7.3 or higher / PHP 7.3 или выше
+- PHP 8.0 or higher / PHP 8.0 или выше
 - MySQL database / База данных MySQL
 
 ## Configuration Setup / Настройка конфигурации
@@ -111,6 +111,59 @@ Controller. Base class inherited by all controllers /
 - `view($viewName, $data = [])` - render `$data` in `$viewName` view / вывод данных `$data` в представление `$viewName`
 - `json($data)` - output data in **json** format / вывод данных в **json** формате
 
+### app\Core\Request:
+#### Description / Описание:
+Request handling class. Provides a convenient interface for working with HTTP request data, including headers, parameters, and files /
+
+Класс обработки запроса. Предоставляет удобный интерфейс для работы с данными HTTP-запроса, включая заголовки, параметры и файлы.
+
+#### Methods / Методы:
+- `createFromGlobals()` - create request instance from PHP globals / создание экземпляра запроса из глобальных переменных PHP
+
+- `all()` - get all input data (query + post) / получение всех входных данных
+
+- `input($key, $default = null)` - get value from request or query / получение значения из request или query
+
+- `query($key = null, $default = null)` - get query string parameters / получение параметров строки запроса
+
+- `post($key = null, $default = null)` - get POST parameters / получение параметров POST-запроса
+
+- `has($key)` - check if key exists in request / проверка существования ключа в запросе
+
+- `file($key)` - get uploaded file / получение загруженного файла
+
+- `method()` - get HTTP method (GET, POST, etc.) / получение HTTP метода
+
+- `path()` - get request path / получение пути запроса
+
+- `isJson()` - check if request expects JSON / проверка, является ли запрос JSON-запросом
+
+- `header($key = null, $default = null)` - get request headers / получение заголовков запроса
+
+- `bearerToken()` - get token from Authorization header / получение токена из заголовка Authorization
+
+- `validate(array $rules)` - validate request data / валидация данных запроса
+
+### app\Core\Route:
+#### Description / Описание:
+Routing system. Manages URI registration and request dispatching to controllers or closures /
+
+Система роутинга. Управляет регистрацией URI и распределением запросов по контроллерам или анонимным функциям.
+
+#### Methods / Методы:
+- `init($path = '')` - initialize router and set base path / инициализация роутера и установка базового пути
+
+- `get($uri, $action, $middleware = [])` - register GET route / регистрация GET маршрута
+
+- `post($uri, $action, $middleware = [])` - register POST route / регистрация POST маршрута
+
+- `put($uri, $action, $middleware = [])` - register PUT route / регистрация PUT маршрута
+
+- `patch($uri, $action, $middleware = [])` - register PATCH route / регистрация PATCH маршрута
+
+- `delete($uri, $action, $middleware = [])` - register DELETE route / регистрация DELETE маршрута
+
+- `dispatch()` - match current request to registered routes / сопоставление текущего запроса с зарегистрированными маршрутами
 
 ### app\Core\Collection:
 
@@ -260,6 +313,46 @@ class UserController extends Controller
 //Usage in code / Использование в коде:
 $userController = new UserController();
 $userController->index();
+
+//Routing / Роутинг
+use App\Core\Route;
+
+// Simple closure route / Простой маршрут с функцией
+Route::get('/hello', function($request) {
+    return "Hello World!";
+});
+
+// Route to controller / Маршрут на контроллер
+Route::get('/user/{id}', 'UserController@show');
+
+// Route with optional parameter / Маршрут с необязательным параметром
+Route::get('/post/{?slug}', 'PostController@index');
+
+// Dispatching (usually in index.php) / Запуск (обычно в index.php)
+Route::init();
+Route::dispatch();
+
+//Request & Validation / Запрос и валидация
+// Inside controller / В контроллере
+public function store(Request $request) 
+{
+    // Check data / Проверка данных
+    if ($request->has('email')) {
+        $email = $request->input('email');
+    }
+
+    // Validation / Валидация
+    $validated = $request->validate([
+        'name' => 'required',
+        'email' => 'required|email',
+        'password' => 'required|min:6'
+    ]);
+
+    // Work with files / Работа с файлами
+    if ($request->hasFile('avatar')) {
+        $file = $request->file('avatar');
+    }
+}
 ```
 
 Will render view `Views\users.php` / Выведет представление `Views\users.php`
