@@ -2,6 +2,7 @@
 
 namespace App\Core\Database;
 
+use Dotenv\Dotenv;
 use App\Core\Config;
 use PDO;
 use PDOException;
@@ -15,6 +16,9 @@ class Migrator
 
     public function __construct(string $migrationsPath)
     {
+        $dotenv = Dotenv::createImmutable('./');
+        $dotenv->load();
+        Config::init();
         $this->connection = new PDO(
             "mysql:host=".Config::$DB_HOST.";dbname=".Config::$DB_NAME,
             Config::$DB_USER,
