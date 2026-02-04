@@ -12,7 +12,7 @@ class Config
     public static string $DB_USER;
     public static string $DB_PASS;
 
-    private static PDO $connection;
+    private static ?PDO $connection = null;
 
     public static function init(array $settings = []): void
     {
