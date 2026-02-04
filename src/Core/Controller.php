@@ -6,9 +6,7 @@ global $auth_status;
 
 class Controller
 {
-    protected $auth_status;
-
-    public function view($viewName, $data = [])
+    public function view($viewName, $data = []): void
     {
         extract($data);
         $viewName = str_replace('.', '/', $viewName);

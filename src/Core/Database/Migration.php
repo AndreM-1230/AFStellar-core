@@ -8,8 +8,8 @@ use PDOException;
 
 abstract class Migration
 {
-    protected $connection;
-    protected $table = 'migrations';
+    protected PDO $connection;
+    protected string $table = 'migrations';
 
     public function __construct(?PDO $connection)
     {
@@ -37,7 +37,7 @@ abstract class Migration
         return $this->table;
     }
 
-    protected function createTable(string $table, callable $callback)
+    protected function createTable(string $table, callable $callback): void
     {
         $blueprint = new Blueprint($table);
         $callback($blueprint);
@@ -50,7 +50,7 @@ abstract class Migration
         }
     }
 
-    protected function dropTable(string $table)
+    protected function dropTable(string $table): void
     {
         $sql = "DROP TABLE IF EXISTS {$table}";
 
@@ -62,7 +62,7 @@ abstract class Migration
         }
     }
 
-    protected function addColumn(string $table, string $column, string $type)
+    protected function addColumn(string $table, string $column, string $type): void
     {
         $sql = "ALTER TABLE {$table} ADD COLUMN {$column} {$type}";
 
@@ -74,7 +74,7 @@ abstract class Migration
         }
     }
 
-    protected function changeColumn(string $table, string $old_name, string $new_name, string $type, $value = [])
+    protected function changeColumn(string $table, string $old_name, string $new_name, string $type, $value = []): void
     {
         $sql = "ALTER TABLE `{$table}` CHANGE `{$old_name}` `{$new_name}` {$type}";
         if ($type == 'ENUM') {

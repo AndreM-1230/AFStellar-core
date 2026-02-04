@@ -61,7 +61,8 @@ Available commands / Доступные команды:
 HELP;
 }
 
-function createMigrationFile($name) {
+function createMigrationFile($name): void
+{
     $timestamp = date('Y_m_d_His');
     $filename = __DIR__."/app/Database/migrations/{$timestamp}_{$name}.php";
     $className = str_replace(' ', '', ucwords(str_replace('_', ' ', $name)));

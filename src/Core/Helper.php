@@ -4,7 +4,7 @@ namespace App\Core;
 
 class Helper
 {
-    static public function Exception(\Exception $e, bool $exit = false)
+    static public function Exception(\Exception $e, bool $exit = false): void
     {
         if (!defined('APP_DEBUG')) {
             define('APP_DEBUG', true);

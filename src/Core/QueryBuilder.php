@@ -7,19 +7,19 @@ Use PDO;
 class QueryBuilder
 {
     protected $connection;
-    protected $table;
+    protected string $table;
     protected $model;
-    protected $wheres = [];
-    protected $bindings = [];
+    protected array $wheres = [];
+    protected array$bindings = [];
     protected $limit;
     protected $offset;
     protected $orWhere = false;
-    protected $columns = ['*'];
-    protected $orders = [];
-    protected $group = [];
-    protected $having = [];
-    protected $joins = [];
-    protected $unions = [];
+    protected array $columns = ['*'];
+    protected array $orders = [];
+    protected array $group = [];
+    protected array $having = [];
+    protected array $joins = [];
+    protected array $unions = [];
 
     public function __construct(PDO $connection, $table)
     {
@@ -27,19 +27,19 @@ class QueryBuilder
         $this->table = $table;
     }
 
-    public function model($model)
+    public function model($model): static
     {
         $this->model = $model;
         return $this;
     }
 
-    public function select($columns = ['*'])
+    public function select($columns = ['*']): static
     {
         $this->columns = is_array($columns) ? $columns : func_get_args();
         return $this;
     }
 
-    public function where($column, $operator, $value = null)
+    public function where($column, $operator, $value = null): static
     {
         if (func_num_args() === 2) {
             $value = $operator;
@@ -51,7 +51,7 @@ class QueryBuilder
         return $this;
     }
 
-    public function orWhere($column, $operator, $value = null)
+    public function orWhere($column, $operator, $value = null): static
     {
         if (func_num_args() === 2) {
             $value = $operator;
@@ -63,7 +63,7 @@ class QueryBuilder
         return $this;
     }
 
-    public function whereGroup(\Closure $callback)
+    public function whereGroup(\Closure $callback): static
     {
         $subQuery = new self($this->connection, $this->table);
         $callback($subQuery);
@@ -78,7 +78,7 @@ class QueryBuilder
         return $this;
     }
 
-    public function orWhereGroup(\Closure $callback)
+    public function orWhereGroup(\Closure $callback): static
     {
         $subQuery = new self($this->connection, $this->table);
         $callback($subQuery);
@@ -93,7 +93,7 @@ class QueryBuilder
         return $this;
     }
 
-    public function whereIn($column, array $values, $type = 'AND')
+    public function whereIn($column, array $values, $type = 'AND'): static
     {
         $placeholders = implode(', ', array_fill(0, count($values), '?'));
         $this->wheres[] = [
@@ -106,7 +106,7 @@ class QueryBuilder
         return $this;
     }
 
-    public function whereNotIn($column, array $values)
+    public function whereNotIn($column, array $values): static
     {
         $placeholders = implode(', ', array_fill(0, count($values), '?'));
         $this->wheres[] = [
@@ -119,7 +119,7 @@ class QueryBuilder
         return $this;
     }
 
-    public function whereNull($column, $type = 'AND')
+    public function whereNull($column, $type = 'AND'): static
     {
         $this->wheres[] = [
             'type' => $type,
@@ -130,7 +130,7 @@ class QueryBuilder
         return $this;
     }
 
-    public function whereNotNull($column)
+    public function whereNotNull($column): static
     {
         $this->wheres[] = [
             'type' => 'AND',
@@ -141,13 +141,13 @@ class QueryBuilder
         return $this;
     }
 
-    public function having($raw)
+    public function having($raw): static
     {
         $this->having[] = $raw;
         return $this;
     }
 
-    public function union($query, $all = false)
+    public function union($query, $all = false): static
     {
         $this->unions[] = [
             'query' => $query,
@@ -156,7 +156,7 @@ class QueryBuilder
         return $this;
     }
 
-    protected function compileUnions()
+    protected function compileUnions(): string
     {
         if (empty($this->unions)) {
             return '';
@@ -170,7 +170,7 @@ class QueryBuilder
         return $unionSql;
     }
 
-    public function get()
+    public function get(): Collection
     {
         $sql = $this->compileSelect();
         $sth = $this->connection->prepare($sql);
@@ -187,7 +187,7 @@ class QueryBuilder
         return new Collection($items);
     }
 
-    public function join($table, $first, $operator = null, $second = null, $type = 'INNER')
+    public function join($table, $first, $operator = null, $second = null, $type = 'INNER'): static
     {
         $join = new \stdClass();
         $join->table = $table;
@@ -204,17 +204,17 @@ class QueryBuilder
         return $this;
     }
 
-    public function leftJoin($table, $first, $operator = null, $second = null)
+    public function leftJoin($table, $first, $operator = null, $second = null): static
     {
         return $this->join($table, $first, $operator, $second, 'LEFT');
     }
 
-    public function rightJoin($table, $first, $operator = null, $second = null)
+    public function rightJoin($table, $first, $operator = null, $second = null): static
     {
         return $this->join($table, $first, $operator, $second, 'RIGHT');
     }
 
-    protected function compileJoins()
+    protected function compileJoins(): string
     {
         return implode('', array_map(function($join) {
             if (isset($join->closure)) {
@@ -229,7 +229,7 @@ class QueryBuilder
         }, $this->joins));
     }
 
-    protected function compileSelect()
+    protected function compileSelect(): string
     {
         $sql = [
             'SELECT',
@@ -259,7 +259,7 @@ class QueryBuilder
         return $sql;
     }
 
-    protected function compileColumns()
+    protected function compileColumns(): string
     {
         $columns = [];
         if (!empty($this->columns)) {
@@ -274,7 +274,7 @@ class QueryBuilder
             '*';
     }
 
-    public function buildWhereClause($wheres)
+    public function buildWhereClause($wheres): string
     {
         $clauses = [];
         foreach ($wheres as $key => $where) {
@@ -312,19 +312,19 @@ class QueryBuilder
         return $result[0] ?? null;
     }
 
-    public function limit($limit)
+    public function limit($limit): static
     {
         $this->limit = $limit;
         return $this;
     }
 
-    public function offset($offset)
+    public function offset($offset): static
     {
         $this->offset = $offset;
         return $this;
     }
 
-    public function insert(array $data)
+    public function insert(array $data): bool
     {
         $columns = implode(', ', array_keys($data));
         $placeholders = array_fill(0, count($data), '?');
@@ -340,7 +340,7 @@ class QueryBuilder
         return $sth->execute(array_values($data));
     }
 
-    public function update(array $data)
+    public function update(array $data): bool
     {
         $setClause = implode(', ', array_map(function($column) {
             $value = '?';
@@ -370,7 +370,7 @@ class QueryBuilder
         return $sth->execute($bindings);
     }
 
-    public function delete()
+    public function delete(): bool
     {
         $sql = "DELETE FROM `{$this->table}`";
         $value = '?';
@@ -390,20 +390,20 @@ class QueryBuilder
         return $sth->execute($this->bindings);
     }
 
-    public function orderBy($column, $direction = 'ASC')
+    public function orderBy($column, $direction = 'ASC'): static
     {
         $direction = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
         $this->orders[] = compact('column', 'direction');
         return $this;
     }
 
-    public function groupBy($column)
+    public function groupBy($column): static
     {
         $this->group[] = $column;
         return $this;
     }
 
-    public function compileOrders()
+    public function compileOrders(): string
     {
         if (empty($this->orders)) {
             return '';
@@ -418,7 +418,7 @@ class QueryBuilder
         return ' ORDER BY ' . implode(', ', $clauses);
     }
 
-    public function compileGroup()
+    public function compileGroup(): string
     {
         if (empty($this->group)) {
             return '';
@@ -426,7 +426,7 @@ class QueryBuilder
         return ' GROUP BY ' . implode(', ', $this->group);
     }
 
-    public function compileHaving()
+    public function compileHaving(): string
     {
         if (empty($this->having)) {
             return '';
@@ -434,7 +434,7 @@ class QueryBuilder
         return ' HAVING ' . implode(' AND ', $this->having);
     }
 
-    public function toRawSql()
+    public function toRawSql(): string
     {
         return $this->compileSelect();
     }
@@ -451,7 +451,7 @@ class QueryBuilder
         return $sql;
     }
 
-    public function selectRaw($expression, $bindings = [])
+    public function selectRaw($expression, $bindings = []): static
     {
         if (is_array($this->columns) && count($this->columns) === 1 && $this->columns[0] === '*') {
             $this->columns = [DB::raw($expression)->getValue()];
@@ -462,7 +462,7 @@ class QueryBuilder
         return $this;
     }
 
-    public function whereRaw($sql, $type = 'AND', $bindings = [])
+    public function whereRaw($sql, $type = 'AND', $bindings = []): static
     {
         if (is_array($type)) {
             $bindings = $type;

@@ -12,6 +12,7 @@ class Request
     protected array $headers;
     protected $content;
     protected array $attributes;
+    protected array $routeParams;
     
     public function __construct(
         array $query = [],
@@ -115,6 +116,15 @@ class Request
             unset($all[$key]);
         }
         return $all;
+    }
+
+    public function setRouteParams(array $params): self
+    {
+        $this->routeParams = $params;
+        foreach ($params as $key => $item) {
+            $this->setAttribute($key, $item);
+        }
+        return $this;
     }
 
     public function file(string $key)
@@ -327,7 +337,11 @@ class Request
 
     public function __get(string $name)
     {
-        return $this->input($name);
+        if ($this->input($name) !== null) {
+            return $this->input($name);
+        } elseif ($this->getAttribute($name) !== null) {
+            return $this->getAttribute($name);
+        }
     }
     
     public function __isset(string $name): bool

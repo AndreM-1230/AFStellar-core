@@ -7,14 +7,14 @@ use PDO;
 class Config
 {
     private static $loaded = false;
-    public static $DB_HOST;
-    public static $DB_NAME;
-    public static $DB_USER;
-    public static $DB_PASS;
+    public static string $DB_HOST;
+    public static string $DB_NAME;
+    public static string $DB_USER;
+    public static string $DB_PASS;
 
-    private static $connection;
+    private static PDO $connection;
 
-    public static function init(array $settings = [])
+    public static function init(array $settings = []): void
     {
         if (!self::$loaded) {
             self::$DB_HOST = $_ENV['DATABASE_HOST'] ?? 'localhost';
@@ -30,7 +30,7 @@ class Config
         }
     }
 
-    public static function connection($udp_config = false)
+    public static function connection($udp_config = false): PDO
     {
         if (!static::$connection || $udp_config) {
             static::$connection = new PDO(

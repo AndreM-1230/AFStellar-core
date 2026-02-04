@@ -5,13 +5,13 @@ namespace App\Core;
 Use PDO;
 
 abstract class Model {
-    protected static $table;
-    protected $fillable = [];
-    protected $relations = [];
-    protected $joined = [];
+    protected static string $table;
+    protected array $fillable = [];
+    protected array $relations = [];
+    protected array $joined = [];
     protected static $connection;
-    protected $exists = false;
-    protected static $columnTypes = [];
+    protected bool $exists = false;
+    protected static ?array $columnTypes = [];
 
     public function __construct(array $fillable = [])
     {
@@ -26,12 +26,12 @@ abstract class Model {
         static::connect();
     }
 
-    protected static function connect()
+    protected static function connect(): void
     {
         static::$connection = Config::connection();
     }
 
-    protected static function boot()
+    protected static function boot(): void
     {
         static::$columnTypes = null;
         $sth = static::$connection->query("
@@ -49,7 +49,7 @@ abstract class Model {
         }
     }
 
-    public static function getColumnTypes()
+    public static function getColumnTypes(): ?array
     {
         static::boot();
         return static::$columnTypes;
@@ -61,19 +61,19 @@ abstract class Model {
         return static::$columnTypes[$column] ?? null;
     }
 
-    public static function query()
+    public static function query(): QueryBuilder
     {
         return (new static)->newQuery();
     }
 
-    protected function newQuery()
+    protected function newQuery(): QueryBuilder
     {
         $query = new QueryBuilder(static::$connection, static::getTable());
         $query->model(get_called_class());
         return $query;
     }
 
-    protected static function getTable()
+    protected static function getTable(): string
     {
         return static::$table ?:strtolower(basename(str_replace('\\', '/', static::class))) . 's';
     }
@@ -115,12 +115,12 @@ abstract class Model {
         return $this->fillable[$name] ?? null;
     }
 
-    public function getFillable()
+    public function getFillable(): array
     {
         return $this->fillable;
     }
 
-    public function getItems()
+    public function getItems(): array
     {
         if (count($this->fillable)) {
             return $this->fillable;
@@ -128,7 +128,7 @@ abstract class Model {
         return $this->joined;
     }
 
-    public function fill(array $values)
+    public function fill(array $values): static
     {
         foreach ($this->getFillable() as $key => $value) {
             if (in_array($key, array_keys($values))) {

@@ -1,6 +1,6 @@
 {
     "name": "afstellar/af-stellar-core",
-    "version": "0.8.6",
+    "version": "0.9.0",
     "description": "Lightweight MVC core with ORM, Migrations and Query Builder",
     "type": "library",
     "license": "MIT",
@@ -10,7 +10,7 @@
         }
     ],
     "require": {
-        "php": "^7.3"
+        "php": "^8.0"
     },
     "autoload": {
       "psr-4": {

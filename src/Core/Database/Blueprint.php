@@ -4,10 +4,10 @@ namespace App\Core\Database;
 
 class Blueprint
 {
-    protected $table;
-    protected $columns = [];
-    protected $primaryKey = null;
-    protected $foreignKeys = [];
+    protected string $table;
+    protected array $columns = [];
+    protected ?string $primaryKey = null;
+    protected array $foreignKeys = [];
 
     public function __construct(string $table)
     {
@@ -54,21 +54,21 @@ class Blueprint
         return $this;
     }
 
-    public function notNull()
+    public function notNull(): self
     {
         $this->columns[array_key_last($this->columns)] .= ' NOT NULL';
         return $this;
     }
 
-    public function defaultValue($value)
+    public function defaultValue($value): self
     {
         $this->columns[array_key_last($this->columns)] .= " DEFAULT '{$value}'";
         return $this;
     }
 
-    public function comment($comemnt)
+    public function comment($comment): self
     {
-        $this->columns[array_key_last($this->columns)] .= " COMMENT '{$comemnt}'";
+        $this->columns[array_key_last($this->columns)] .= " COMMENT '{$comment}'";
         return $this;
     }
 
@@ -78,20 +78,20 @@ class Blueprint
         return $this;
     }
 
-    public function float(string $column, int $precision = 8, int $scale = 2)
+    public function float(string $column, int $precision = 8, int $scale = 2): self
     {
         $this->columns[] = "{$column} FLOAT({$precision},{$scale})";
         return $this;
     }
 
-    public function bit(string $column, int $length = 1)
+    public function bit(string $column, int $length = 1): self
     {
         $length = max(1, min(64, $length));
         $this->columns[] = "{$column} BIT({$length})";
         return $this;
     }
 
-    public function varchar(string $column, int $length = 1)
+    public function varchar(string $column, int $length = 1): self
     {
         $length = max(1, $length);
         $this->columns[] = "{$column} VARCHAR({$length})";
