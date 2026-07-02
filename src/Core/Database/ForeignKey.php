@@ -7,8 +7,8 @@ class ForeignKey
     protected $column;
     protected $references;
     protected $on;
-    protected $onDelete = '';
-    protected $onUpdate = '';
+    protected $onDelete = " ON DELETE NO ACTION";
+    protected $onUpdate = " ON UPDATE NO ACTION";
 
     public function __construct(string $column)
     {
@@ -41,7 +41,8 @@ class ForeignKey
 
     public function compile(): string
     {
-        return "CONSTRAINT fk_{$this->column} FOREIGN KEY ({$this->column}) 
+        $time = time();
+        return "CONSTRAINT fk_{$this->column}_{$time} FOREIGN KEY ({$this->column}) 
                 REFERENCES {$this->on} ({$this->references}){$this->onDelete}{$this->onUpdate}";
     }
 }

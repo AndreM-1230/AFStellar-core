@@ -6,41 +6,78 @@ use PDO;
 
 class DB
 {
-    protected static PDO $connection;
+    protected static $connection;
+    public static $DB_TYPE = 'mysql';
 
-    public static function setConnection(PDO $connection): void
+    public static function setConnection(string $connectionName = 'default')
     {
-        static::$connection = $connection;
+        static::$connection = Config::connection($connectionName);
+        static::$DB_TYPE = Config::connectionType($connectionName);
+        return self::class;
     }
 
-    public static function table($table): QueryBuilder
+    public static function table($table)
     {
-        static::$connection = Config::connection();
-        return new QueryBuilder(static::$connection, $table);
+        $connection = static::$connection;
+        $db_type = static::$DB_TYPE;
+        if (!$connection) {
+            $connection = Config::connection();
+        }
+        static::$connection = null;
+        static::$DB_TYPE = 'mysql';
+        return new QueryBuilder($connection, $table, $db_type);
     }
 
-    public static function raw($value): RawExpression
+    public static function raw($value)
     {
         return new RawExpression($value);
     }
     
     public static function select($sql, $bindings = [])
     {
-        $sth = static::$connection->prepare($sql);
+        $connection = static::$connection;
+        if (!$connection) {
+            $connection = Config::connection();
+        }
+        static::$connection = null;
+        static::$DB_TYPE = 'mysql';
+        $sth = $connection->prepare($sql);
         $sth->execute($bindings);
         return $sth->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function insert($sql, $bindings = []): bool
+    public static function insert($sql, $bindings = [])
     {
-        $sth = static::$connection->prepare($sql);
+        $connection = static::$connection;
+        if (!$connection) {
+            $connection = Config::connection();
+        }
+        static::$connection = null;
+        static::$DB_TYPE = 'mysql';
+        $sth = $connection->prepare($sql);
         return $sth->execute($bindings);
     }
 
-    public static function exec($sql): void
+    public static function quote($sql)
     {
-        static::$connection = Config::connection();
-        static::$connection->exec($sql);
+        $connection = static::$connection;
+        if (!$connection) {
+            $connection = Config::connection();
+        }
+        static::$connection = null;
+        static::$DB_TYPE = 'mysql';
+        return $connection->quote($sql);
+    }
+
+    public static function exec($sql)
+    {
+        $connection = static::$connection;
+        if (!$connection) {
+            $connection = Config::connection();
+        }
+        static::$connection = null;
+        static::$DB_TYPE = 'mysql';
+        $connection->exec($sql);
     }
 
     public static function update($sql, $bindings = [])
@@ -53,19 +90,37 @@ class DB
         return self::insert($sql, $bindings);
     }
 
-    public static function beginTransaction(): void
+    public static function beginTransaction()
     {
-        static::$connection = Config::connection();
+        if (!static::$connection) {
+            static::$connection = Config::connection();
+        }
         static::$connection->beginTransaction();
+        static::$connection = null;
+        static::$DB_TYPE = 'mysql';
     }
 
     public static function rollBack()
     {
-        static::$connection->rollBack();
+        if (!static::$connection) {
+            static::$connection = Config::connection();
+        }
+        if (static::$connection->inTransaction()) {
+            static::$connection->rollBack();
+        }
+        static::$connection = null;
+        static::$DB_TYPE = 'mysql';
     }
 
     public static function commit()
     {
-        static::$connection->commit();
+        if (!static::$connection) {
+            static::$connection = Config::connection();
+        }
+        if (static::$connection->inTransaction()) {
+            static::$connection->commit();
+        }
+        static::$connection = null;
+        static::$DB_TYPE = 'mysql';
     }
 }

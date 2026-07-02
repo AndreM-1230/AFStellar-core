@@ -10,7 +10,7 @@ use App\Core\Model;
 
 class Collection implements ArrayAccess, IteratorAggregate, JsonSerializable
 {
-    protected array $items = [];
+    protected $items = [];
 
     public function __construct(array $items = [])
     {
@@ -27,7 +27,7 @@ class Collection implements ArrayAccess, IteratorAggregate, JsonSerializable
         return $this->items;
     }
 
-    public function add($item): void
+    public function add($item)
     {
         $this->items[] = $item;
     }
@@ -176,7 +176,7 @@ class Collection implements ArrayAccess, IteratorAggregate, JsonSerializable
         return isset($this->items[$offset]);
     }
 
-    public function offsetGet($offset): mixed
+    public function offsetGet($offset)
     {
         return $this->items[$offset] ?? null;
     }

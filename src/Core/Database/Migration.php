@@ -3,13 +3,14 @@
 namespace App\Core\Database;
 
 use App\Core\Config;
+use Exception;
 use PDO;
 use PDOException;
 
 abstract class Migration
 {
-    protected PDO $connection;
-    protected string $table = 'migrations';
+    protected $connection;
+    protected $table = 'migrations';
 
     public function __construct(?PDO $connection)
     {
@@ -17,9 +18,9 @@ abstract class Migration
             $this->connection = $connection;
         } else {
             $this->connection = new PDO(
-                "mysql:host=".Config::$DB_HOST.";dbname=".Config::$DB_NAME,
-                Config::$DB_USER,
-                Config::$DB_PASS,
+                "mysql:host=".$_ENV['DATABASE_HOST'].";dbname=".$_ENV['DATABASE_NAME'],
+                $_ENV['DATABASE_USER'],
+                $_ENV['DATABASE_PASSWORD'],
                 [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_EMULATE_PREPARES => true
@@ -37,7 +38,7 @@ abstract class Migration
         return $this->table;
     }
 
-    protected function createTable(string $table, callable $callback): void
+    protected function createTable(string $table, callable $callback)
     {
         $blueprint = new Blueprint($table);
         $callback($blueprint);
@@ -50,11 +51,20 @@ abstract class Migration
         }
     }
 
-    protected function dropTable(string $table): void
+    protected function create(string $name, string $sql)
     {
-        $sql = "DROP TABLE IF EXISTS {$table}";
-
         try {
+            $this->connection->exec($sql);
+            echo "{$name} created successfully.\n";
+        } catch (PDOException $e) {
+            echo "Error creating {$name}: " . $e->getMessage() . "\n";
+        }
+    }
+
+    protected function dropTable(string $table)
+    {
+        try {
+            $sql = "DROP TABLE IF EXISTS {$table}";
             $this->connection->exec($sql);
             echo "Table {$table} dropped successfully.\n";
         } catch (PDOException $e) {
@@ -62,7 +72,17 @@ abstract class Migration
         }
     }
 
-    protected function addColumn(string $table, string $column, string $type): void
+    protected function drop(string $name, string $sql)
+    {
+        try {
+            $this->connection->exec($sql);
+            echo "{$name} dropped successfully.\n";
+        } catch (PDOException $e) {
+            echo "Error dropping table {$name}: " . $e->getMessage() . "\n";
+        }
+    }
+
+    protected function addColumn(string $table, string $column, string $type)
     {
         $sql = "ALTER TABLE {$table} ADD COLUMN {$column} {$type}";
 
@@ -74,7 +94,7 @@ abstract class Migration
         }
     }
 
-    protected function changeColumn(string $table, string $old_name, string $new_name, string $type, $value = []): void
+    protected function changeColumn(string $table, string $old_name, string $new_name, string $type, $value = [])
     {
         $sql = "ALTER TABLE `{$table}` CHANGE `{$old_name}` `{$new_name}` {$type}";
         if ($type == 'ENUM') {

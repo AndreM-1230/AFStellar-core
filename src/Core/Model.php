@@ -5,13 +5,14 @@ namespace App\Core;
 Use PDO;
 
 abstract class Model {
-    protected static string $table;
-    protected array $fillable = [];
-    protected array $relations = [];
-    protected array $joined = [];
+    protected static $table;
+    protected $fillable = [];
+    protected $relations = [];
+    protected $joined = [];
     protected static $connection;
-    protected bool $exists = false;
-    protected static ?array $columnTypes = [];
+    protected static $connection_type = 'mysql';
+    protected $exists = false;
+    protected static $columnTypes = [];
 
     public function __construct(array $fillable = [])
     {
@@ -26,12 +27,13 @@ abstract class Model {
         static::connect();
     }
 
-    protected static function connect(): void
+    protected static function connect($connection_name = 'default')
     {
-        static::$connection = Config::connection();
+        static::$connection = Config::connection($connection_name);
+        static::$connection_type = Config::connectionType($connection_name);
     }
 
-    protected static function boot(): void
+    protected static function boot()
     {
         static::$columnTypes = null;
         $sth = static::$connection->query("
@@ -49,7 +51,7 @@ abstract class Model {
         }
     }
 
-    public static function getColumnTypes(): ?array
+    public static function getColumnTypes()
     {
         static::boot();
         return static::$columnTypes;
@@ -61,26 +63,26 @@ abstract class Model {
         return static::$columnTypes[$column] ?? null;
     }
 
-    public static function query(): QueryBuilder
+    public static function query()
     {
         return (new static)->newQuery();
     }
 
-    protected function newQuery(): QueryBuilder
+    protected function newQuery()
     {
-        $query = new QueryBuilder(static::$connection, static::getTable());
+        $query = new QueryBuilder(static::$connection, static::getTable(), static::$connection_type);
         $query->model(get_called_class());
         return $query;
     }
 
-    protected static function getTable(): string
+    protected static function getTable()
     {
         return static::$table ?:strtolower(basename(str_replace('\\', '/', static::class))) . 's';
     }
 
     public function __get($name)
     {
-
+        
         if (method_exists($this, $name)) {
             if (!array_key_exists($name, $this->relations)) {
                 $relation = $this->$name();
@@ -115,12 +117,12 @@ abstract class Model {
         return $this->fillable[$name] ?? null;
     }
 
-    public function getFillable(): array
+    public function getFillable()
     {
         return $this->fillable;
     }
 
-    public function getItems(): array
+    public function getItems()
     {
         if (count($this->fillable)) {
             return $this->fillable;
@@ -128,7 +130,7 @@ abstract class Model {
         return $this->joined;
     }
 
-    public function fill(array $values): static
+    public function fill(array $values)
     {
         foreach ($this->getFillable() as $key => $value) {
             if (in_array($key, array_keys($values))) {
@@ -140,7 +142,7 @@ abstract class Model {
         return $this;
     }
 
-    public function save()
+    public function save(bool $addLog = false)
     {
         $fillable = [];
         foreach ($this->fillable as $key => $value) {
@@ -162,16 +164,19 @@ abstract class Model {
             "INSERT INTO {$table} ({$columns}) VALUES ({$placeholders})"
         );
         $result = $sth->execute(array_values($fillable));
-
         if ($result && !$this->exists) {
-            $this->id = static::$connection->lastInsertId();
+            if ($addLog) {
+                Log::info("sql request newbase insert {$table}", $fillable, true);
+            }
+            if (in_array('id', array_keys($this->fillable))) {
+                $this->fillable['id'] = static::$connection->lastInsertId();
+            }
             $this->exists = true;
         }
-
         return $result;
     }
 
-    public function update(array $attributes)
+    public function update(array $attributes, bool $addLog = false)
     {
         $fillableAttr = [];
         foreach ($attributes as $key => $value) {
@@ -196,16 +201,28 @@ abstract class Model {
         $sth  = static::$connection->prepare(
             "UPDATE `{$table}` SET {$setClause} WHERE id = ?"
         );
+        if ($addLog) {
+            Log::info("sql request newbase update {$table}", array_merge($fillableAttr, ['where_id' => $this->id]), true);
+        }
         return $sth->execute(array_merge(array_values($fillableAttr), [$this->id]));
     }
 
-    public function delete()
+    public function delete(bool $addLog = false)
     {
         $table = static::getTable();
         $sth = static::$connection->prepare(
             "DELETE FROM {$table} WHERE id = ?"
         );
         $result = $sth->execute([$this->id]);
+        if ($addLog) {
+            $fillable = [];
+            foreach ($this->fillable as $key => $value) {
+                if ($value !== null) {
+                    $fillable[$key] = $value;
+                }
+            }
+            Log::info("sql request newbase delete {$table}", $fillable, true);
+        }
         if ($result) {
             $this->exists = false;
         }

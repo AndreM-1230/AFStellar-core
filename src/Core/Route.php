@@ -7,43 +7,43 @@ use Exception;
 
 class Route
 {
-    private static array $routes = [];
-    private static string $path;
-    private static array $middlewares = [];
+    private static $routes = [];
+    private static $path;
+    private static $middlewares = [];
 
-    public static function init ($path = ''): void
+    public static function init ($path = '')
     {
         self::$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         self::$path = str_replace($path, '', self::$path);
         self::$path = rtrim(self::$path, '/') ?: '/';
     }
 
-    public static function get($uri, $action, $middleware = []): void
+    public static function get($uri, $action, $middleware = [])
     {
         self::addRoute('GET', $uri, $action, $middleware);
     }
 
-    public static function post($uri, $action, $middleware = []): void
+    public static function post($uri, $action, $middleware = [])
     {
         self::addRoute('POST', $uri, $action, $middleware);
     }
 
-    public static function put($uri, $action, $middleware = []): void
+    public static function put($uri, $action, $middleware = [])
     {
         self::addRoute('PUT', $uri, $action, $middleware);
     }
 
-    public static function patch($uri, $action, $middleware = []): void
+    public static function patch($uri, $action, $middleware = [])
     {
         self::addRoute('PATCH', $uri, $action, $middleware);
     }
 
-    public static function delete($uri, $action, $middleware = []): void
+    public static function delete($uri, $action, $middleware = [])
     {
         self::addRoute('DELETE', $uri, $action, $middleware);
     }
 
-    private static function addRoute($methods, $uri, $action, $middleware): void
+    private static function addRoute($methods, $uri, $action, $middleware)
     {
         $methods = (array)$methods;
         $uri = '/' . trim($uri, '/');
@@ -59,7 +59,7 @@ class Route
         }
     }
 
-    public static function dispatch(): void
+    public static function dispatch()
     {
         $requestMethod = $_SERVER['REQUEST_METHOD'];
         if ($requestMethod === 'POST' && isset($_POST['_method'])) {
@@ -81,23 +81,22 @@ class Route
         }
     }
 
-    private static function getParams(string $uri, $matches): array
+    private static function getParams(string $uri, $matches)
     {
         array_shift($matches);
-        if (str_contains($uri, '{')) {
+        if (strpos($uri, '{') !== false) {
             return self::parseParams($uri, $matches);
         }
         return array_values($matches);
     }
 
-    private static function parseParams(string $uri, $matches): array
+    private static function parseParams(string $uri, $matches)
     {
         $params = [];
         $paramsNames = [];
         $matchIndex = 0;
         preg_match_all('/\{(\??)([a-zA-Z_][a-zA-Z0-9_]*)\}/i', $uri, $paramsNames, PREG_SET_ORDER);
-        //$pattern = '#^' . $pattern . '$#';
-        //preg_match_all($pattern, $uri, $paramsNames);
+
         foreach ($paramsNames as $key => $item) {
             $isOptional = !empty($item[1]);
             $paramName = $item[2];
@@ -118,12 +117,12 @@ class Route
         return $params;
     }
 
-    private static function convertToRegex($uri): string
+    private static function convertToRegex($uri)
     {
         $pattern = preg_replace('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', '([^/]+)', $uri);
         $pattern = preg_replace('/\{(\?[a-zA-Z_][a-zA-Z0-9_]*)\}/', '(?:/([^/]+))?', $pattern);
         $pattern = str_replace('//', '/', $pattern);
-        if (str_contains($pattern, '(?:/([^/]+))?')) {
+        if (strpos($pattern, '(?:/([^/]+))?') !== false) {
             $pattern = str_replace('/(?:/([^/]+))?', '(?:/([^/]+))?', $pattern);
             $pattern = rtrim($pattern, '/');
             $pattern .= '/?';
@@ -131,17 +130,17 @@ class Route
         return '#^' . $pattern . '$#';
     }
 
-    private static function executeAction($action, $params = []): void
+    private static function executeAction($action, $params = [])
     {
-        $request = Request::createFromGlobals();
         if (is_callable($action)) {
-            call_user_func_array($action, [$request, $params]);
-        } elseif (is_string($action) && str_contains($action, '@')) {
+            call_user_func_array($action, $params);
+        } elseif (is_string($action) && strpos($action, '@') !== false) {
             list($controller, $method) = explode('@', $action);
             $controller = 'App\Controllers\\' . $controller;
             $controllerInstance = new $controller();
+            $request = Request::createFromGlobals();
             $request->setRouteParams($params);
-            call_user_func_array([$controllerInstance, $method], [$request, $params]);
+            call_user_func_array([$controllerInstance, $method], [$request]);
         } else {
             throw new Exception('');
         }

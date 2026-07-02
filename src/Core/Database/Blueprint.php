@@ -4,10 +4,10 @@ namespace App\Core\Database;
 
 class Blueprint
 {
-    protected string $table;
-    protected array $columns = [];
-    protected ?string $primaryKey = null;
-    protected array $foreignKeys = [];
+    protected $table;
+    protected $columns = [];
+    protected $primaryKey = null;
+    protected $foreignKeys = [];
 
     public function __construct(string $table)
     {
@@ -45,30 +45,38 @@ class Blueprint
         return $this;
     }
 
-    public function index(string $column, string $name = null): self
+    public function enum(string $column, array $values): self
+    {
+        $list = implode(',', array_map(function($v){return "'$v'";}, $values));
+        $this->columns[] = "{$column} ENUM({$list})";
+        return $this;
+    }
+
+    public function index(array $column, string $name = null): self
     {
         if (is_null($name)) {
-            $name = $column;
+            $name = implode('_', $column);
         }
+        $column = '`' . implode('`, `', $column) .'`';
         $this->columns[] = "INDEX `{$name}` (`{$column}`)";
         return $this;
     }
 
-    public function notNull(): self
+    public function notNull()
     {
         $this->columns[array_key_last($this->columns)] .= ' NOT NULL';
         return $this;
     }
 
-    public function defaultValue($value): self
+    public function defaultValue($value)
     {
         $this->columns[array_key_last($this->columns)] .= " DEFAULT '{$value}'";
         return $this;
     }
 
-    public function comment($comment): self
+    public function comment($comemnt)
     {
-        $this->columns[array_key_last($this->columns)] .= " COMMENT '{$comment}'";
+        $this->columns[array_key_last($this->columns)] .= " COMMENT '{$comemnt}'";
         return $this;
     }
 
@@ -78,20 +86,26 @@ class Blueprint
         return $this;
     }
 
-    public function float(string $column, int $precision = 8, int $scale = 2): self
+    public function float(string $column, int $precision = 8, int $scale = 2)
     {
         $this->columns[] = "{$column} FLOAT({$precision},{$scale})";
         return $this;
     }
 
-    public function bit(string $column, int $length = 1): self
+    public function double(string $column)
+    {
+        $this->columns[] = "{$column} DOUBLE";
+        return $this;
+    }
+
+    public function bit(string $column, int $length = 1)
     {
         $length = max(1, min(64, $length));
         $this->columns[] = "{$column} BIT({$length})";
         return $this;
     }
 
-    public function varchar(string $column, int $length = 1): self
+    public function varchar(string $column, int $length = 1)
     {
         $length = max(1, $length);
         $this->columns[] = "{$column} VARCHAR({$length})";
@@ -114,14 +128,13 @@ class Blueprint
 
     public function compileCreate(): string
     {
-        $columns = implode(",\n", $this->columns);
+        $columns =  $this->columns ? implode(",\n", $this->columns) : '';
 
         $foreignKeys = array_map(function($fk) {
             return $fk->compile();
         }, $this->foreignKeys);
 
-        $foreignKeysSql = $foreignKeys ? ",\n" . implode(",\n", $foreignKeys) : '';
-
+        $foreignKeysSql = $foreignKeys ? ($columns ? ",\n" : '') . implode(",\n", $foreignKeys) : '';
         return "CREATE TABLE {$this->table} (\n{$columns}{$foreignKeysSql}\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
     }
 }

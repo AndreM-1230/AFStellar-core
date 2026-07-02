@@ -2,15 +2,12 @@
 
 namespace App\Core;
 
-global $auth_status;
-
 class Controller
 {
-    public function view($viewName, $data = []): void
+    public function view($viewName, $data = [])
     {
-        extract($data);
         $viewName = str_replace('.', '/', $viewName);
-        require __DIR__ . "/../Views/{$viewName}.view.php";
+        echo SimpleBlade::render(__DIR__ . "/../Views/{$viewName}.view.php", $data);
     }
 
     public function json($data)

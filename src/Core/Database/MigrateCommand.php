@@ -4,7 +4,7 @@ namespace App\Core\Database;
 
 class MigrateCommand
 {
-    public function run(array $args): void
+    public function run(array $args)
     {
         $action = $args[1] ?? 'migrate';
         $migrationsPath = __DIR__ . '/app/migrations/';

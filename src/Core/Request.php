@@ -4,15 +4,15 @@ namespace App\Core;
 
 class Request
 {
-    protected array $query;
-    protected array $request;
-    protected array $files;
-    protected array $server;
-    protected array $cookies;
-    protected array $headers;
+    protected $query;
+    protected $request;
+    protected $files;
+    protected $server;
+    protected $cookies;
+    protected $headers;
     protected $content;
-    protected array $attributes;
-    protected array $routeParams;
+    protected $attributes;
+    protected $routeParams;
     
     public function __construct(
         array $query = [],
@@ -118,7 +118,7 @@ class Request
         return $all;
     }
 
-    public function setRouteParams(array $params): self
+    public function setRouteParams($params): self
     {
         $this->routeParams = $params;
         foreach ($params as $key => $item) {
@@ -152,26 +152,6 @@ class Request
         $path = parse_url($this->server['REQUEST_URI'] ?? '/', PHP_URL_PATH);
         return trim($path, '/') ?: '/';
     }
-    
-    public function url(): string
-    {
-        $scheme = $this->isSecure() ? 'https' : 'http';
-        $host = $this->getHost();
-        $port = $this->getPort();
-        
-        $url = "{$scheme}://{$host}";
-        if (($scheme === 'http' && $port != 80) || ($scheme === 'https' && $port != 443)) {
-            $url .= ":{$port}";
-        }
-        
-        return $url . $this->getRequestUri();
-    }
-    
-    public function fullUrl(): string
-    {
-        $query = $this->getQueryString();
-        return $this->url() . ($query ? "?{$query}" : '');
-    }
 
     public function header(string $key = null, $default = null)
     {
@@ -182,20 +162,11 @@ class Request
         $key = strtoupper(str_replace('-', '_', $key));
         return $this->headers[$key] ?? $default;
     }
-    
-    public function bearerToken(): ?string
-    {
-        $header = $this->header('Authorization');
-        if (str_starts_with($header ?? '', 'Bearer ')) {
-            return substr($header, 7);
-        }
-        return null;
-    }
 
     public function isJson(): bool
     {
         $contentType = $this->header('Content-Type');
-        return str_contains($contentType ?? '', '/json');
+        return strpos($contentType ?? '', '/json');
     }
     
     public function json(string $key = null, $default = null)
@@ -245,57 +216,11 @@ class Request
         return $this;
     }
 
-    public function validate(array $rules): array
-    {
-        $data = $this->all();
-        $validated = [];
-        $errors = [];
-        
-        foreach ($rules as $field => $ruleString) {
-            $rulesArray = explode('|', $ruleString);
-            $value = $data[$field] ?? null;
-            
-            foreach ($rulesArray as $rule) {
-                if (!$this->checkRule($field, $value, $rule, $data)) {
-                    $errors[$field][] = "Поле {$field} не прошло правило: {$rule}";
-                }
-            }
-            
-            if (!isset($errors[$field])) {
-                $validated[$field] = $value;
-            }
-        }
-        
-        if (!empty($errors)) {
-            throw new \Exception('Validation failed: ' . json_encode($errors));
-        }
-        
-        return $validated;
-    }
-    
-    protected function checkRule(string $field, $value, string $rule, array $data): bool
-    {
-        switch ($rule) {
-            case 'required':
-                return !empty($value) || $value === '0';
-            case 'email':
-                return filter_var($value, FILTER_VALIDATE_EMAIL) !== false;
-            case 'numeric':
-                return is_numeric($value);
-            case 'min:6':
-                return strlen($value) >= 6;
-            case 'confirmed':
-                return isset($data[$field . '_confirmation']) && $value === $data[$field . '_confirmation'];
-            default:
-                return true;
-        }
-    }
-
     protected function initHeaders(): array
     {
         $headers = [];
         foreach ($this->server as $key => $value) {
-            if (str_starts_with($key, 'HTTP_')) {
+            if (strpos($key, 'HTTP_') === 0) {
                 $headers[substr($key, 5)] = $value;
             } elseif (in_array($key, ['CONTENT_TYPE', 'CONTENT_LENGTH', 'CONTENT_MD5'])) {
                 $headers[$key] = $value;
@@ -310,15 +235,6 @@ class Request
         return explode(':', $host)[0];
     }
     
-    protected function getPort(): int
-    {
-        $host = $this->server['HTTP_HOST'] ?? 'localhost';
-        if (str_contains($host, ':')) {
-            return (int) explode(':', $host)[1];
-        }
-        return $this->isSecure() ? 443 : 80;
-    }
-    
     protected function getRequestUri(): string
     {
         return $this->server['REQUEST_URI'] ?? '/';
@@ -327,12 +243,6 @@ class Request
     protected function getQueryString(): string
     {
         return $this->server['QUERY_STRING'] ?? '';
-    }
-    
-    public function isSecure(): bool
-    {
-        $https = $this->server['HTTPS'] ?? '';
-        return !empty($https) && $https !== 'off';
     }
 
     public function __get(string $name)
