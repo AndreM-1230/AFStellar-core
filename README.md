@@ -4,7 +4,7 @@
     *Andre Moore*
 
 ## Requirements / Требования
-- PHP 7.3 or higher / PHP 7.3 или выше
+- PHP 8.0 or higher / PHP 8.0 или выше
 - MySQL database (partial MSSQL/sqlsrv support) / База данных MySQL (частичная поддержка MSSQL/sqlsrv)
 
 ## Configuration Setup / Настройка конфигурации
@@ -235,6 +235,41 @@ System Logger. Base class for application logging with support for log levels an
 - `read($lenght = false, $type = false, $logFileName = "app")` - read log entries with optional filtering by type and limit / чтение записей лога с возможностью фильтрации по типу и ограничением количества строк.
 
 - `info($message, $data = [], $subData = false)` / `error(...)` / `warning(...)` / `debug(...)` / `fatal(...)` - helper methods for writing logs at specific levels / вспомогательные методы для записи логов на определенных уровнях.
+
+### App\Core\Validator:
+
+#### Description / Описание:
+Простой валидатор входных данных по строковым правилам (в стиле Laravel) / 
+Simple input validator using string-based rules (Laravel-style).
+
+#### Methods / Методы:
+- `validate(array $data, array $rules): bool` - проверяет `$data` по набору `$rules`, возвращает `true`, если ошибок нет / validates `$data` against a set of `$rules`, returns `true` if there are no errors
+- `getErrors(): array` - получить массив ошибок, сгруппированных по полю / get the array of errors grouped by field
+
+Правила задаются строкой через `|`, параметр правила указывается через `:` (например `'email' => 'required|email|unique:users,email,15'`) / Rules are passed as a `|`-separated string, a rule's parameter is given after `:` (e.g. `'email' => 'required|email|unique:users,email,15'`).
+
+Поддерживаемые правила / Supported rules:
+- `required` - поле обязательно для заполнения / field must not be empty
+- `string` - поле должно быть строкой / field must be a string
+- `numeric` - поле должно быть числом / field must be numeric
+- `email` - поле должно быть корректным email адресом / field must be a valid email address
+- `min:{length}` - минимальная длина строки / minimum string length
+- `max:{length}` - максимальная длина строки / maximum string length
+- `unique:{table},{column}[,{ignoreId}]` - значение должно быть уникальным в `{table}.{column}` (через `DB`); необязательный `{ignoreId}` исключает запись с этим `id` из проверки (например, при обновлении) / value must be unique in `{table}.{column}` (via `DB`); the optional `{ignoreId}` excludes a record with that `id` from the check (e.g. when updating)
+
+```php
+use App\Core\Validator;
+
+$validator = new Validator();
+$isValid = $validator->validate($request->all(), [
+    'email' => 'required|email|unique:users,email',
+    'name'  => 'required|string|min:2|max:50',
+]);
+
+if (!$isValid) {
+    return $this->json(['errors' => $validator->getErrors()]);
+}
+```
 
 ### App\Core\SimpleBlade:
 
